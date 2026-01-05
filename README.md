@@ -1,129 +1,225 @@
-Adversarial Debate Workflow (Mastra Multi-Agent System)
+# Adversarial Debate Workflow  
+**Mastra Multi-Agent System**
 
-This project implements a multi-round adversarial debate system using Mastra, where AI agents act as:
-	•	Proposer Agent – builds and defends the claim
-	•	Opponent Agent – rebuts and challenges the claim
-	•	Judge Agent – evaluates arguments, assigns truth scores, and issues directives
-	•	SummarizeURL Agent – summarizes evidence from URLs
-	•	Summarizer Agent – produces round verdicts and final summaries
-
-Each round includes evidence gathering, filtering (inadmissible sources), and a scoring rationale with confidence levels.
-The workflow automatically stops when confidence is high or score delta falls below a threshold.
+A multi-round adversarial debate system built with Mastra, where specialized AI agents
+argue, rebut, evaluate evidence, and converge on a scored verdict with confidence.
 
 
-1. Prerequisites
+## Overview
 
-Ensure you have the following installed:
+This project implements an automated **adversarial debate workflow** using multiple AI agents,
+each with a clearly defined role. The system is designed to evaluate claims rigorously through
+structured argumentation, evidence gathering, rebuttal, and judgment.
 
-Node.js >= 18
-npm or yarn
+The workflow runs for multiple rounds and **terminates automatically** when:
+- Confidence reaches a predefined threshold, or
+- The score delta between rounds falls below a minimum value
 
-Install the Mastra dev:
+The final output is a **fully structured JSON object** suitable for downstream use in analysis,
+evaluation pipelines, or user-facing applications.
 
+## Agents and Responsibilities
+
+The system consists of the following agents:
+
+- **Proposer Agent**  
+  Builds the initial claim, defends it, and responds to rebuttals.
+
+- **Opponent Agent**  
+  Challenges the claim, identifies weaknesses, and presents counter-arguments.
+
+- **Judge Agent**  
+  Evaluates arguments, filters inadmissible evidence, assigns truth scores,
+  provides rationale, and issues directives.
+
+- **SummarizeURL Agent**  
+  Fetches and summarizes evidence from URLs for use in debate rounds.
+
+- **Summarizer Agent**  
+  Produces round-level verdicts and a final summary of the debate.
+
+Each agent operates independently but contributes to a shared case state.
+
+## Debate Workflow Logic
+
+Each debate round follows a structured sequence:
+
+1. Claim evaluation and argument generation
+2. Evidence gathering from web sources (optional)
+3. Evidence filtering (inadmissible or low-credibility sources removed)
+4. Rebuttal and counter-rebuttal
+5. Judge scoring and rationale
+6. Confidence and score-delta evaluation
+
+The workflow halts automatically when stopping conditions are met.
+
+## Prerequisites
+
+Ensure the following are installed:
+
+- **Node.js** ≥ 18
+- **npm** or **yarn**
+
+Install the Mastra development tools:
+
+```bash
 npm create mastra@latest
+```
 
+## Project Setup
 
-2. Project Setup
+### Initialize a new Mastra project:
 
-Clone or create a Mastra project:
-
-npx mastra init adversarial-debate
+```bash
 cd adversarial-debate
+```
 
-Install dependencies:
+#### Install dependencies:
 
+```bash
 npm install
+```
 
-3. Add Your Agents and Workflow
+## Project Structure
 
-Inside src/agents/:
-	•	proposerAgent.ts
-	•	opponentAgent.ts
-	•	judgeAgent.ts
-	•	summarizeURLAgent.ts
-	•	summarizerAgent.ts
+### Agents (src/agents/)
+- proposerAgent.ts
+- opponentAgent.ts
+- judgeAgent.ts
+- summarizeURLAgent.ts
+- summarizerAgent.ts
 
-Inside src/workflows/:
-	•	multiDebate.ts or adversarialDebateWorkflow (main multi-round workflow)
+### Workflows (src/workflows/)
+- multiDebate.ts: 
+Main multi-round adversarial debate workflow
 
-Inside src/tools/:
-	•	searchWebTool.ts (used for live evidence retrieval)
-
-4. Environment Variables
-
-Create a .env file in the project root:
-OPENAI_API_KEY=<your_openai_api_key>
-SERPER_API_KEY=<your_serper_api_key> # optional but if need latest info then required for the agent to fecth latest infomation from online
+### Tools (src/tools/)
+- searchWebTool.ts: 
+Used for live evidence retrieval
 
 
-5. Run in Development
+### Create a .env file in the project root:
 
-Start the local Mastra agent runner:
+``` bash
+OPENAI_API_KEY=your_openai_api_key
+SERPER_API_KEY=your_serper_api_key
+```
 
+## Notes:
+- SERPER_API_KEY is required for the Agent to gather the secondary sources
+- Required only if agents need live, up-to-date web evidence
+
+Running in Development
+
+Start the Mastra development runner:
+
+```bash
 npm run dev
+```
 
-Run the workflow manually from GUI(Mastra playground):
+Run the workflow from the Mastra Playground or CLI:
 
+``` bash
 mastra run adversarial-debate --input {
-    "claim": "Superhero movies all have the same basic plot",
-    "maxRounds": 3,
-    "stopConfidence": "high",
-    "minDelta": 2
+  "claim": "Superhero movies all have the same basic plot",
+  "maxRounds": 3,
+  "stopConfidence": "high",
+  "minDelta": 2
+}
+```
+## Output Format
+
+The workflow returns a structured JSON object containing:
+	•	final - final verdict summary
+	•	caseState - full debate history across all rounds
+	•	truthScore - numerical assessment of claim validity
+	•	confidence - qualitative confidence level
+	•	verdict - human-readable outcome
+
+Example output
+
+``` bash
+{
+  "judge": {
+    "global": {
+      "truthScore": 70,
+      "confidence": "moderate",
+      "rationale": "While many superhero movies follow common narrative structures, notable variations challenge the claim of uniformity.",
+      "adjustments": [
+        { "reason": "base truth assessment", "delta": 85 },
+        { "reason": "edge cases or ambiguity", "delta": -10 },
+        { "reason": "evidence credibility", "delta": -5 }
+      ]
+    },
+    "directives": {
+      "notes": [
+        "The proposer identified common narrative patterns.",
+        "The opponent highlighted meaningful genre variation."
+      ],
+      "requests": [
+        "Provide more examples of films that deviate from standard structures."
+      ],
+      "inadmissible": ["E2", "E4"]
+    }
   },
+  "summary": {
+    "verdict": "Mostly true",
+    "truthScore": 70,
+    "confidence": "moderate"
+  }
+}
+```
+## Configuration Controls
 
-6. Output
+The debate behavior can be tuned using input parameters:
+- maxRounds – maximum number of debate rounds
+- stopConfidence – confidence level required to halt early
+- minDelta – minimum score change between rounds to continue
 
-The workflow returns a full structured JSON object:
-	•	final – round verdict summary
-	•	caseState – all rounds, evidence, rebuttals, judge reasoning
-	•	truthScore, confidence, and verdict fields for final reporting
-Example out put:
+These controls allow balancing debate depth against runtime cost.
 
-"judge": {
-            "global": {
-              "truthScore": 70,
-              "confidence": "moderate",
-              "rationale": "While many superhero movies do follow common narrative structures like the hero's journey, the opponent's arguments highlight significant variations in themes and character dynamics that challenge the claim of uniformity. The adjustments reflect the strong base truth of common plot elements, but acknowledge the diversity within the genre.",
-              "adjustments": [
-                {
-                  "reason": "base truth assessment",
-                  "delta": 85
-                },
-                {
-                  "reason": "edge cases or ambiguity",
-                  "delta": -10
-                },
-                {
-                  "reason": "evidence credibility",
-                  "delta": -5
-                }
-              ]
-            },
-            "directives": {
-              "notes": [
-                "The proposer provided valid examples of common structures in superhero films.",
-                "The opponent effectively pointed out the diversity and exceptions within the genre."
-              ],
-              "requests": [
-                "Provide more specific examples of superhero films that deviate from the common plot structures.",
-                "Include statistical analysis or surveys on audience perceptions of superhero movie plots."
-              ],
-              "inadmissible": [
-                "E2",
-                "E4"
-              ]
-            }
-          },
-          "summary": {
-            "verdict": "Mostly true",
-            "truthScore": 70,
-            "confidence": "moderate",
-            "summary": "Many superhero movies generally follow common narrative structures, but there are significant variations in themes and character dynamics that challenge the notion of uniformity within the genre."
-          }
+## Developer Tips
+- Use mastra dev for live agent debugging
+- Extend agent prompts for domain-specific reasoning
+- Modify the Judge Agent to:
+- Change scoring logic
+- Add stricter evidence admissibility rules
+- Add additional tools:
+- Fact-checking APIs using the Mastra's swagger UI
+- Source credibility scoring
+- Citation tracking
+
+## Why This Project Is Technically Interesting
+- Multi-agent coordination: 
+Independent agents collaborate and compete within a shared state.
+- Automated stopping conditions: 
+Prevents unnecessary rounds and reduces compute cost.
+- Explainable scoring: 
+Every truth score is backed by a rationale and explicit adjustments.
+- Evidence governance: 
+Weak sources are filtered before influencing outcomes.
+- Composable design: 
+Agents, tools, and workflows can be reused across domains.
+
+## Future Enhancements
+- Planned improvements include:
+- Cross-round memory weighting for long debates
+- Source credibility scoring models
+- Citation confidence tracking
+- Domain-specific judge profiles (legal, medical, policy)
+- Multi-claim batch debate execution
+- Visualization layer for debate progression and score deltas
 
 
-7. Developer Tips
-	•	Use mastra dev for live agent debugging.
-	•	Adjust the minDelta or stopConfidence in workflow input to control how many rounds run.
-	•	Extend judgeAgent or proposerAgent prompts for domain-specific logic.
-	•	Add more tools (e.g., fact-check APIs, credibility scoring) for better realism.
+## Use Cases
+ - Claim verification and fact analysis
+ - Policy and ethics debate simulation
+ - Research assistance and literature review
+ - Educational tools for critical thinking
+ - Automated argument evaluation pipelines
+
+
+
+## IMPORTANT!!!
+This system is designed for structured reasoning and evaluation, not open-ended chat.
+It is best suited for scenarios where transparency, scoring rationale, and evidence quality matter.
